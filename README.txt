@@ -46,6 +46,9 @@ partitions:
 How to use the disk images:
 ===========================
 
+     Downloading: Binary or source packages are available here:
+        https://github.com/n6il/eou_ide/releases
+
       XRoar: Use the ide cartridge and attach the 68IDE.IDE image to hd0. Use
              YADOS or HDB-DOS LBA ROM(hdblba.rom).  See the start-ide.sh
              script for a sample command line.
