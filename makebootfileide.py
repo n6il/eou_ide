@@ -73,12 +73,12 @@ mods = (
 	'Clock2',
 )
 
-padding='\x00'*256
+padding=b'\x00'*256
 
 def copyFile(fnl, gn, pad=False, mode='wb'):
     g=open(gn, mode)
     for fn in fnl:
-        f=open(fn)
+        f=open(fn, 'rb')
         data = f.read(256)
         i=256
         while data:
