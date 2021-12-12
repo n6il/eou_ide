@@ -9,7 +9,9 @@
 This is a DIY Pack for setting up EOU to work on a GlensideIDE, SuperIDE,
 or in XRoar with an emulated GlensideIDE.
 
-The makebootfileide.py script creates the following disk images:
+The makebootfileide.py script creates the following disk images in the
+build/<CPU> directory.  If you are using 6309 cpu every this document says
+"68xxx" you substitute "63xxx" for the 6309 version:
 
    68IDE.VHD -- This is a VHD disk image designed for use on IDE Drives.
       You can use this disk on a real GlensideIDE or SuperIDE controller.
@@ -76,9 +78,9 @@ DIY Package Contents:
 Instructions for creating your own IDE Disk images:
 ===================================================
 
-1. Download a copy of NitrOS-9 Ease Of Use for 6809
-2. Make a copy of 68SDC.VHD in this directory
-3. Run the script: python ./makebootfileide.py
-4. The disk images are created: 68IDE.VHD, 68IDE.ide, and 68IDE.dsk
+1. Download a copy of NitrOS-9 Ease Of Use
+2. Note the path of either 68SDC.VHD or 63SDC.VHD
+3. Run the script: python ./makebootfileide.py -c <CPU> -i <VHD>
+4. The disk images are created in a build/<CPU> directory: 68IDE.VHD, 68IDE.ide, and 68IDE.dsk
 5. To use it:  See usage instructions above.
 
