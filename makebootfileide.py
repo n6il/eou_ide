@@ -93,6 +93,8 @@ bootfile_ide='OS9Boot'
 modsCopy = (('boottrack','rel_80'), ('boottrack','krn_beta5'))
 ideModules = ('llide.dr', 'i0_ide.dd', 'i1_ide.dd', 'ddi0_ide.dd', 'boot_ide')
 modsKernel = ('rel_80', 'boot_ide', 'krn_beta5')
+miscFiles = ('README.txt', 'hdblba.rom', 'start-ide.sh')
+scriptFiles = ('start-ide.sh',)
 
 # KwikGen Instructions
 instns = [
@@ -260,5 +262,12 @@ copyFile([args.EOUVHD], args.IDEVHD, mode='ab')
 copyFile([args.IDEHDR], args.IDEIDE)
 copyFile([args.IDEVHD], args.IDEIDE, mode='ab')
 
+# 9. Copy Misc files to build dir
+copyPath(miscFiles, args.scriptDir, args.buildDir)
+copyPath(scriptFiles, args.ideModuleDir, args.buildDir)
+
+print('')
+print('='*50)
 print('Output Dir: %s' % args.buildDir)
+print('='*50)
 os.chdir(pwd)
