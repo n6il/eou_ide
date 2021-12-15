@@ -1,0 +1,12 @@
+diff -r f1aca05a4001 hdbdos/hdbdos.asm
+--- a/hdbdos/hdbdos.asm	Sat Sep 18 01:44:13 2021 -0300
++++ b/hdbdos/hdbdos.asm	Wed Dec 15 09:50:17 2021 -0800
+@@ -159,7 +159,7 @@
+ ERROR          equ       %00000001           Error detected
+ 
+ * IDE Hardware Offsets
+-DATAADDR       equ       $FF70
++DATAADDR       equ       $FF50
+ DATARW         equ       0                   8 bits (1st 8, non-latched)
+ ERR            equ       1                   Error when read
+ FEATUR         equ       1                   Write

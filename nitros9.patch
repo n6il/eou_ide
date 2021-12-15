@@ -1,0 +1,32 @@
+diff -r aa5c87cbbd32 level1/modules/llide.asm
+--- a/level1/modules/llide.asm	Thu Sep 23 23:23:35 2021 +0200
++++ b/level1/modules/llide.asm	Wed Dec 15 09:48:10 2021 -0800
+@@ -583,7 +583,7 @@
+ * it is an ATA device.  It will also determine if it is an LBA or CHS mode
+ * device, and save the appropriate CHS or LBA sector values.
+ ATAIdent                 
+-               ldd       #NBUSYDRDY          /BUSY and DRDY
++               ldd       #NBUSYDRQ           /BUSY and DRQ
+                lbsr      StatusWait          wait for proper condition
+                bcs       ex@                 branch if error
+ * Harvest C/H/S and LBA sector values.
+diff -r aa5c87cbbd32 level2/coco3/modules/makefile
+--- a/level2/coco3/modules/makefile	Thu Sep 23 23:23:35 2021 +0200
++++ b/level2/coco3/modules/makefile	Wed Dec 15 09:48:10 2021 -0800
+@@ -422,13 +422,13 @@
+ 
+ # IDE Descriptors
+ ddi0_ide.dd: superdesc.asm
+-	$(AS) $(ASOUT)$@ $< $(IDEFLAGS) $(MASTER) -DDD=1
++	$(AS) $(ASOUT)$@ $< $(IDEFLAGS) $(MASTER) -DDD=1 -DITSOFS2=0x02 -DITSOFS3=0x76 
+ 
+ i0_ide.dd: superdesc.asm
+-	$(AS) $(ASOUT)$@ $< $(IDEFLAGS) $(MASTER)
++	$(AS) $(ASOUT)$@ $< $(IDEFLAGS) $(MASTER) -DITSOFS2=0x02 -DITSOFS3=0x76 
+ 
+ i1_ide.dd: superdesc.asm
+-	$(AS) $(ASOUT)$@ $< $(IDEFLAGS) $(SLAVE)
++	$(AS) $(ASOUT)$@ $< $(IDEFLAGS) $(SLAVE) -DITSOFS2=0x02 -DITSOFS3=0x76 
+ 
+ ih_ide.dd: superdesc.asm
+ 	$(AS) $(ASOUT)$@ $< $(IDEFLAGS) $(HDBDOS)
