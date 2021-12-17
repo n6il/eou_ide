@@ -4,6 +4,7 @@ import sys
 import argparse
 import subprocess
 import shlex
+import json
 
 def parseArgs():
     parser = argparse.ArgumentParser(
@@ -18,6 +19,11 @@ def parseArgs():
         '--vhd',
         dest='EOUVHD',
         help='Source EOU VHD File')
+    parser.add_argument(
+        '-d',
+        '--dw',
+        dest='dw',
+        help='Make Dw Image in addition to IDE image')
 
     args = parser.parse_args()
 
@@ -50,18 +56,26 @@ def parseArgs():
             print('ERROR: %s: no such file' % args.EOUVHD)
             err = True
 
-    
+    # dw
+    dwTypes = ['becker', 'bitBanger', 'bbCoCo1', 'rs232', 'mmmpi']
+    if args.dw and args.dw not in dwTypes:
+        print('ERROR: %s: not a valid dw type. Pick from %s' % (args.dw, dwTypes))
+        err = 1
+
+
     if err:
-        print(args)
         parser.print_usage()
         sys.exit(1)
     return args
 
-def pathSetup(args):
+def pathSetup(args, subDir=None):
+    buildSubDir = args.cpu
+    if subDir is not None:
+        buildSubDir = '%s_%s' % (args.cpu, subDir)
     args.scriptDir = os.path.dirname(os.path.abspath(__file__))
-    args.buildDir = os.path.join(args.scriptDir, 'build', args.cpu)
+    args.buildDir = os.path.join(args.scriptDir, 'build', buildSubDir)
     args.moduleDir = os.path.join(args.buildDir, 'modules')
-    args.ideModuleDir = os.path.join(args.scriptDir, args.cpu)
+    args.localModuleDir = os.path.join(args.scriptDir, args.cpu)
     args.IDEHDR = os.path.join(args.scriptDir, 'header.ide')
     args.IDEDSK = os.path.join(args.buildDir, '%sIDE.dsk' % (args.cpuShort))
     args.IDEVHD = os.path.join(args.buildDir, '%sIDE.VHD' % (args.cpuShort))
@@ -78,7 +92,6 @@ def runCmd(cmd):
     return(p.returncode, p.stdout.read())
 
 args = parseArgs()
-args = pathSetup(args)
 
 EOUMODDIR='MODULES/%sL2/MODULES' % (args.cpu)
 
@@ -90,48 +103,8 @@ os9_gen='os9 gen -b%s -t%s %s'
 kernel_ide='kernel_ide'
 bootfile_ide='OS9Boot'
 
-modsCopy = (('boottrack','rel_80'), ('boottrack','krn_beta5'))
-ideModules = ('llide.dr', 'i0_ide.dd', 'i1_ide.dd', 'ddi0_ide.dd', 'boot_ide')
-modsKernel = ('rel_80', 'boot_ide', 'krn_beta5')
 miscFiles = ('README.txt', 'hdblba.rom', 'start-ide.sh')
 scriptFiles = ('start-ide.sh',)
-
-# KwikGen Instructions
-instns = [
-    {
-        'action': 'del',
-        'module': 'llcocosdc'
-    },
-    {
-        'action': 'del',
-        'module': 'DD'
-    },
-    {
-        'action': 'del',
-        'module': 'H1'
-    },
-    {
-        'action': 'ins',
-        'module': 'llide.dr',
-        'after': 'RBSuper'
-    },
-    {
-        'action': 'ins',
-        'module': 'i0_ide.dd',
-        'after': 'llide.dr'
-    },
-    {
-        'action': 'ins',
-        'module': 'i1_ide.dd',
-        'after': 'i0_ide.dd'
-    },
-    {
-        'action': 'ins',
-        'module': 'ddi0_ide.dd',
-        'after': 'i1_ide.dd'
-    },
-]
-
 
 padding=b'\x00'*256
 
@@ -188,9 +161,7 @@ def kwikGen(path, srcVhd, dst, instList):
         lp = l.split(' ')
         if len(lp) != 3:
             continue
-        print(l)
         mods.append(lp[2].replace('...', ''))
-    print(mods)
     for inst in instList:
         action = inst['action']
         if action == 'del':
@@ -209,65 +180,113 @@ def kwikGen(path, srcVhd, dst, instList):
                 print('KwikGen: ins module: %s after %s' % (module, after))
                 mods.insert(i+1, module)
             except ValueError:
-                raise Exception('KwikGen: %s: Module not found' % module)
+                raise Exception('KwikGen: %s: Module not found' % after)
         else:
             raise Exception('KwinGen: Unknown action: %s' % action)
     copyFile(mods, dst)
     os.chdir(pwd)
 
-# setup
-if not os.path.exists(os.path.dirname(args.buildDir)) or not os.path.exists(args.buildDir):
-    os.makedirs(args.buildDir)
-if not os.path.exists(args.moduleDir):
-    os.makedirs(args.moduleDir)
+def doBuild(buildDir, localMods, copyMods, kernelMods, kwMods):
+    print('-' * 50)
+    print("0. setup")
+    if not os.path.exists(os.path.dirname(buildDir)) or not os.path.exists(buildDir):
+        os.makedirs(buildDir)
+    moduleDir = os.path.join(buildDir, "modules")
+    if not os.path.exists(moduleDir):
+        os.makedirs(moduleDir)
 
-pwd = os.getcwd()
-# 1. Copy some modules out of the EOU Disk
-os.chdir(args.moduleDir)
-for d, mod in modsCopy:
-    path='/'.join([EOUMODDIR, d, mod])
-    cmd = os9_copy % (args.EOUVHD, path, mod)
+    pwd = os.getcwd()
+
+    print('-' * 50)
+    print("1. Copy some modules out of the EOU Disk")
+    os.chdir(moduleDir)
+    #for d, mod in modsCopy:
+    for d, mod in copyMods:
+        path='/'.join([EOUMODDIR, d, mod])
+        cmd = os9_copy % (args.EOUVHD, path, mod)
+        runCmd(cmd)
+
+    print('-' * 50)
+    print("2. Copy local modules into module dir")
+    os.chdir(moduleDir)
+    copyPath(localMods, args.localModuleDir, moduleDir)
+
+    print('-' * 50)
+    print("3. Create kernel containing boot_ide")
+    os.chdir(buildDir)
+    copyFile(addPath(moduleDir, kernelMods), kernel_ide)
+
+    print('-' * 50)
+    print("4. Make new boot file which has IDE drivers inserted")
+    newBootFile = os.path.join(buildDir, 'OS9Boot')
+    #kwikGen(moduleDir, args.EOUVHD, newBootFile, instns)
+    kwikGen(moduleDir, args.EOUVHD, newBootFile, kwMods)
+
+    print('-' * 50)
+    print("5. Make a new boot disk using the new kernel and OS9Boot")
+    cmd = os9_format % (args.IDEDSK)
+    if (os.path.exists(args.IDEDSK)):
+        print('rm %s' % args.IDEDSK)
+        os.unlink(args.IDEDSK)
+    runCmd(cmd)
+    cmd = os9_gen % (bootfile_ide, kernel_ide, args.IDEDSK)
     runCmd(cmd)
 
-# 2. Copy ide modules into module dir
-os.chdir(args.moduleDir)
-copyPath(ideModules, args.ideModuleDir, args.moduleDir)
+    print('-' * 50)
+    print("6. Start making the new IDE VHD Disk.  Copy the floppy disk image to the")
+    print("   drive with padding to IDE's 512-byte sectors")
+    copyFile([args.IDEDSK], args.IDEVHD, pad=True)
+    copyFile([args.IDEDSK], args.IDEDSK+'.pad', pad=True)
 
-# 3. Create kernel containing boot_ide
-os.chdir(args.buildDir)
-copyFile(addPath(args.moduleDir, modsKernel), kernel_ide)
+    print('-' * 50)
+    print("7. Nitros9 knows how to do 512-byte sectors, copy the contents of the")
+    print("   EOU disk into the IDE VHD.")
+    copyFile([args.EOUVHD], args.IDEVHD, mode='ab')
 
-# 4. Make new boot file which has IDE drivers inserted
-newBootFile = os.path.join(args.buildDir, 'OS9Boot')
-kwikGen(args.moduleDir, args.EOUVHD, newBootFile, instns)
+    print('-' * 50)
+    print("8. Make the XRoar IDE Image. XRoar needs a header, so put that on first")
+    copyFile([args.IDEHDR], args.IDEIDE)
+    copyFile([args.IDEVHD], args.IDEIDE, mode='ab')
 
-# 5. Make a new boot disk using the
-cmd = os9_format % (args.IDEDSK)
-if (os.path.exists(args.IDEDSK)):
-    print('rm %s' % args.IDEDSK)
-    os.unlink(args.IDEDSK)
-runCmd(cmd)
-cmd = os9_gen % (bootfile_ide, kernel_ide, args.IDEDSK)
-runCmd(cmd)
+    print('-' * 50)
+    print("9. Copy Misc files to build dir")
+    copyPath(miscFiles, args.scriptDir, buildDir)
+    copyPath(scriptFiles, args.localModuleDir, buildDir)
+    os.chdir(pwd)
 
-# 6. Start making the new IDE VHD Disk.  Copy the floppy disk image to the
-# drive with padding to IDE's 512-byte sectors
-copyFile([args.IDEDSK], args.IDEVHD, pad=True)
+## main
 
-# 7. Nitros9 knows how to do 512-byte sectors, copy the contents of the
-#    EOU disk into the IDE VHD.
-copyFile([args.EOUVHD], args.IDEVHD, mode='ab')
+kwikGenList = [['ide']]
+if args.dw:
+    kwikGenList += [['ide', 'dw_%s' % (args.dw)]]
 
-# 8. Make the XRoar IDE Image. XRoar needs a header, so put that on first
-copyFile([args.IDEHDR], args.IDEIDE)
-copyFile([args.IDEVHD], args.IDEIDE, mode='ab')
+msgs = []
+for kwikGens in kwikGenList:
+    localMods = []
+    copyMods = []
+    kernelMods = []
+    instns = []
+    subDir = None
+    if len(kwikGens) > 1 and args.dw:
+        subDir = args.dw
+    args = pathSetup(args, subDir=subDir)
+    for kw in kwikGens:
+        with open(os.path.join(args.scriptDir, 'kwikgens', kw+'.json')) as f:
+                t = json.load(f)
+                localMods += t.get('localMods', [])
+                copyMods += t.get('copyMods', [])
+                kernelMods += t.get('kernelMods', [])
+                instns += t.get('instructions', [])
+    msg = []
+    print('')
+    msg.append('='*50)
+    msg.append('KwikGens: %s' % kwikGens)
+    msg.append('Output Dir: %s' % args.buildDir)
+    msg.append('='*50)
+    print('\n'.join(msg))
+    msgs += msg
+    doBuild(args.buildDir, localMods, copyMods, kernelMods, instns)
 
-# 9. Copy Misc files to build dir
-copyPath(miscFiles, args.scriptDir, args.buildDir)
-copyPath(scriptFiles, args.ideModuleDir, args.buildDir)
 
 print('')
-print('='*50)
-print('Output Dir: %s' % args.buildDir)
-print('='*50)
-os.chdir(pwd)
+print('\n'.join(msgs))

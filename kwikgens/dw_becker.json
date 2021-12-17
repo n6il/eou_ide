@@ -1,0 +1,136 @@
+{
+	"copyMods": [
+		["rbf","dwio_becker.sb"],
+		["rbf","rbdw.dr"],
+		["rbf","x0.dd"],
+		["rbf","x1.dd"],
+		["rbf","x2.dd"],
+		["rbf","x3.dd"],
+		["scf","scdwv.dr"],
+		["scf","n_scdwv.dd"],
+		["scf","n1_scdwv.dd"],
+		["scf","n2_scdwv.dd"],
+		["scf","n3_scdwv.dd"],
+		["scf","n4_scdwv.dd"],
+		["scf","scdwp.dr"],
+		["scf","p_scdwp.dd"],
+		["clocks","clock2_dw"]
+	],
+	"instructions": [
+		{
+			"action": "ins",
+			"module": "dwio_becker.sb",
+			"after": "MD"
+		},
+		{
+			"action": "ins",
+			"module": "rbdw.dr",
+			"after": "dwio_becker.sb"
+		},
+		{
+			"action": "ins",
+			"module": "x0.dd",
+			"after": "rbdw.dr"
+		},
+		{
+			"action": "ins",
+			"module": "x1.dd",
+			"after": "x0.dd"
+		},
+		{
+			"action": "ins",
+			"module": "x2.dd",
+			"after": "x1.dd"
+		},
+		{
+			"action": "ins",
+			"module": "x3.dd",
+			"after": "x2.dd"
+		},
+		{
+			"action": "del",
+			"module": "W9"
+		},
+		{
+			"action": "del",
+			"module": "W10"
+		},
+		{
+			"action": "del",
+			"module": "W11"
+		},
+		{
+			"action": "del",
+			"module": "W12"
+		},
+		{
+			"action": "del",
+			"module": "W13"
+		},
+		{
+			"action": "del",
+			"module": "W14"
+		},
+		{
+			"action": "del",
+			"module": "W15"
+		},
+		{
+			"action": "ins",
+			"module": "scdwv.dr",
+			"after": "W8"
+		},
+		{
+			"action": "ins",
+			"module": "n_scdwv.dd",
+			"after": "scdwv.dr"
+		},
+		{
+			"action": "ins",
+			"module": "n1_scdwv.dd",
+			"after": "n_scdwv.dd"
+		},
+		{
+			"action": "ins",
+			"module": "n2_scdwv.dd",
+			"after": "n1_scdwv.dd"
+		},
+		{
+			"action": "ins",
+			"module": "n3_scdwv.dd",
+			"after": "n2_scdwv.dd"
+		},
+		{
+			"action": "ins",
+			"module": "n4_scdwv.dd",
+			"after": "n3_scdwv.dd"
+		},
+		{
+			"action": "del",
+			"module": "scbbp"
+		},
+		{
+			"action": "del",
+			"module": "p"
+		},
+		{
+			"action": "ins",
+			"module": "scdwp.dr",
+			"after": "Verm"
+		},
+		{
+			"action": "ins",
+			"module": "p_scdwp.dd",
+			"after": "scdwp.dr"
+		},
+		{
+			"action": "del",
+			"module": "Clock2"
+		},
+		{
+			"action": "ins",
+			"module": "clock2_dw",
+			"after": "Clock"
+		}
+	]
+}

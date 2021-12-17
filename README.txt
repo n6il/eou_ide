@@ -83,4 +83,46 @@ Instructions for creating your own IDE Disk images:
 3. Run the script: python ./makebootfileide.py -c <CPU> -i <VHD>
 4. The disk images are created in a build/<CPU> directory: 68IDE.VHD, 68IDE.ide, and 68IDE.dsk
 5. To use it:  See usage instructions above.
+6. If you want DriveWire support, add the -dbecker option.  This will create a new build directory
+	build/<CPU>_becker
+
+Examples:
+
+6809 with IDE
+
+    python ./makebootfileide -c 6809 -i ~/demo/eou/6809/68SDC.VHD
+
+    python ./makebootfileide --cpu 6809 --vhd ~/demo/eou/6809/68SDC.VHD
+
+    Output Dir: build/6809
+
+6809 with IDE and DriveWire
+
+    python ./makebootfileide -c 6809 -i ~/demo/eou/6809/68SDC.VHD -d becker
+
+    python ./makebootfileide --cpu 6809 --vhd ~/demo/eou/6809/68SDC.VHD --dw becker
+
+    Note: Command line above makes both DW and Non-Dw versions:
+
+    Output Dir: build/6809
+    Output Dir: build/6809_becker
+
+6309 with IDE
+
+    python ./makebootfileide -c 6309 -i ~/demo/eou/6309/63SDC.VHD
+
+    python ./makebootfileide --cpu 6309 --vhd ~/demo/eou/6309/63SDC.VHD
+
+    Output Dir: build/6309
+
+6309 with IDE and DriveWire
+
+    python ./makebootfileide -c 6309 -i ~/demo/eou/6309/63SDC.VHD -d becker
+
+    python ./makebootfileide --cpu 6309 --vhd ~/demo/eou/6309/63SDC.VHD --dw becker
+
+    Note: Command line above makes both DW and Non-Dw versions:
+
+    Output Dir: build/6309
+    Output Dir: build/6309_becker
 
