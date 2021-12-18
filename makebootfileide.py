@@ -266,9 +266,7 @@ for kwikGens in kwikGenList:
     copyMods = []
     kernelMods = []
     instns = []
-    subDir = None
-    if len(kwikGens) > 1 and args.dw:
-        subDir = args.dw
+    subDir = '_'.join(kwikGens)
     args = pathSetup(args, subDir=subDir)
     for kw in kwikGens:
         with open(os.path.join(args.scriptDir, 'kwikgens', kw+'.json')) as f:
