@@ -7,13 +7,17 @@ import shlex
 import json
 
 def parseArgs():
+    cpus = ['6809', '6309']
+    emulators = ['xroar', 'mame']
+    dwTypes = ['becker', 'bitBanger', 'bbCoCo1', 'rs232', 'mmmpi']
+
     parser = argparse.ArgumentParser(
         description='EOU Ide Disk Creator')
     parser.add_argument(
         '-c',
         '--cpu',
         dest='cpu',
-        help='CPU Type: 6809 or 6309')
+        help='CPU Type: %s' % (cpus))
     parser.add_argument(
         '-i',
         '--vhd',
@@ -23,12 +27,16 @@ def parseArgs():
         '-d',
         '--dw',
         dest='dw',
-        help='Make Dw Image in addition to IDE image')
+        help='Make Dw Image in addition to IDE image: %s' % (dwTypes))
+    parser.add_argument(
+        '-e',
+        '--emulator',
+        dest='emulator',
+        help='Which Emulator to build for: %s ' % (emulators))
 
     args = parser.parse_args()
 
     # error handling
-    cpus = ['6809', '6309']
     err = False
 
     # required options
@@ -57,11 +65,19 @@ def parseArgs():
             err = True
 
     # dw
-    dwTypes = ['becker', 'bitBanger', 'bbCoCo1', 'rs232', 'mmmpi']
     if args.dw and args.dw not in dwTypes:
         print('ERROR: %s: not a valid dw type. Pick from %s' % (args.dw, dwTypes))
         err = 1
 
+
+    # cpu
+    if args.emulator is None:
+        print('ERROR: Must specify emulator type: %s' %(emulators))
+        err = True
+    else:
+        if args.emulator not in emulators:
+            print('ERROR: %s: Invalid Emulator. Pick from %s' % (args.emulator, emulators))
+            err = True
 
     if err:
         parser.print_usage()
@@ -75,7 +91,7 @@ def pathSetup(args, subDir=None):
     args.scriptDir = os.path.dirname(os.path.abspath(__file__))
     args.buildDir = os.path.join(args.scriptDir, 'build', buildSubDir)
     args.moduleDir = os.path.join(args.buildDir, 'modules')
-    args.localModuleDir = os.path.join(args.scriptDir, args.cpu)
+    args.localModuleDir = os.path.join(args.scriptDir, "modules", args.emulator, args.cpu)
     args.IDEHDR = os.path.join(args.scriptDir, 'header.ide')
     args.IDEDSK = os.path.join(args.buildDir, '%sIDE.dsk' % (args.cpuShort))
     args.IDEVHD = os.path.join(args.buildDir, '%sIDE.VHD' % (args.cpuShort))
@@ -232,21 +248,26 @@ def doBuild(buildDir, localMods, copyMods, kernelMods, kwMods):
     cmd = os9_gen % (bootfile_ide, kernel_ide, args.IDEDSK)
     runCmd(cmd)
 
-    print('-' * 50)
-    print("6. Start making the new IDE VHD Disk.  Copy the floppy disk image to the")
-    print("   drive with padding to IDE's 512-byte sectors")
-    copyFile([args.IDEDSK], args.IDEVHD, pad=True)
-    copyFile([args.IDEDSK], args.IDEDSK+'.pad', pad=True)
+    if args.emulator == 'xroar':
+        print('-' * 50)
+        print("6. Start making the new IDE VHD Disk.  Copy the floppy disk image to the")
+        print("   drive with padding to IDE's 512-byte sectors")
+        copyFile([args.IDEDSK], args.IDEVHD, pad=True)
+        copyFile([args.IDEDSK], args.IDEDSK+'.pad', pad=True)
 
-    print('-' * 50)
-    print("7. Nitros9 knows how to do 512-byte sectors, copy the contents of the")
-    print("   EOU disk into the IDE VHD.")
-    copyFile([args.EOUVHD], args.IDEVHD, mode='ab')
+        print('-' * 50)
+        print("7. Nitros9 knows how to do 512-byte sectors, copy the contents of the")
+        print("   EOU disk into the IDE VHD.")
+        copyFile([args.EOUVHD], args.IDEVHD, mode='ab')
 
-    print('-' * 50)
-    print("8. Make the XRoar IDE Image. XRoar needs a header, so put that on first")
-    copyFile([args.IDEHDR], args.IDEIDE)
-    copyFile([args.IDEVHD], args.IDEIDE, mode='ab')
+        print('-' * 50)
+        print("8. Make the XRoar IDE Image. XRoar needs a header, so put that on first")
+        copyFile([args.IDEHDR], args.IDEIDE)
+        copyFile([args.IDEVHD], args.IDEIDE, mode='ab')
+    elif args.emulator == 'mame':
+        print('-' * 50)
+        print("6. Use the Original VHD File in your emulator:")
+        print("   %s" % (args.EOUVHD))
 
     print('-' * 50)
     print("9. Copy Misc files to build dir")
@@ -256,9 +277,9 @@ def doBuild(buildDir, localMods, copyMods, kernelMods, kwMods):
 
 ## main
 
-kwikGenList = [['ide']]
+kwikGenList = [['ide_%s' % args.emulator]]
 if args.dw:
-    kwikGenList += [['ide', 'dw_%s' % (args.dw)]]
+    kwikGenList += [['ide_%s' % args.emulator, 'dw_%s' % (args.dw)]]
 
 msgs = []
 for kwikGens in kwikGenList:

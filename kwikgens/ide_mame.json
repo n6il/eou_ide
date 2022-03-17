@@ -1,0 +1,45 @@
+{
+	"localMods": [
+	],
+	"copyMods": [
+		["boottrack","rel_80"], ["boottrack","krn_beta5"], ["boottrack", "boot_1773_6ms"],
+		 ["rbf", "llide.dr"], ["rbf", "i0_ide.dd"], ["rbf", "i1_ide.dd"], ["rbf", "ddi0_ide.dd"], ["rbf", "ih_ide.dd"]
+	],
+	"kernelMods": [
+		"rel_80", "boot_1773_6ms", "krn_beta5"
+	],
+	"instructions": [
+		{
+			"action": "del",
+			"module": "llcocosdc"
+		},
+		{
+			"action": "del",
+			"module": "DD"
+		},
+		{
+			"action": "del",
+			"module": "H1"
+		},
+		{
+			"action": "ins",
+			"module": "llide.dr",
+			"after": "RBSuper"
+		},
+		{
+			"action": "ins",
+			"module": "i0_ide.dd",
+			"after": "llide.dr"
+		},
+		{
+			"action": "ins",
+			"module": "i1_ide.dd",
+			"after": "i0_ide.dd"
+		},
+		{
+			"action": "ins",
+			"module": "ddi0_ide.dd",
+			"after": "i1_ide.dd"
+		}
+]
+}
