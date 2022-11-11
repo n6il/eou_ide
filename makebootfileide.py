@@ -8,7 +8,7 @@ import json
 
 def parseArgs():
     cpus = ['6809', '6309']
-    emulators = ['xroar', 'mame']
+    emulators = ['xroar', 'mame', 'coco3fpga']
     dwTypes = ['becker', 'bitBanger', 'bbCoCo1', 'rs232', 'mmmpi']
 
     parser = argparse.ArgumentParser(
@@ -33,6 +33,11 @@ def parseArgs():
         '--emulator',
         dest='emulator',
         help='Which Emulator to build for: %s ' % (emulators))
+    parser.add_argument(
+        '-k',
+        '--kwikgen',
+        dest='kwikgen',
+        help='Build this specific kwikgen, ignores --dw and --emulation')
 
     args = parser.parse_args()
 
@@ -71,10 +76,10 @@ def parseArgs():
 
 
     # cpu
-    if args.emulator is None:
+    if args.emulator is None and args.kwikgen is None:
         print('ERROR: Must specify emulator type: %s' %(emulators))
         err = True
-    else:
+    elif args.kwikgen is None:
         if args.emulator not in emulators:
             print('ERROR: %s: Invalid Emulator. Pick from %s' % (args.emulator, emulators))
             err = True
@@ -95,6 +100,7 @@ def pathSetup(args, subDir=None):
     args.IDEHDR = os.path.join(args.scriptDir, 'header.ide')
     args.IDEDSK = os.path.join(args.buildDir, '%sIDE.dsk' % (args.cpuShort))
     args.IDEVHD = os.path.join(args.buildDir, '%sIDE.VHD' % (args.cpuShort))
+    args.CC3FPGAVHD = os.path.join(args.buildDir, '%sCOCO3FPGA.VHD' % (args.cpuShort))
     args.IDEIDE = os.path.join(args.buildDir, '%sIDE.ide' % (args.cpuShort))
     return args
 
@@ -113,8 +119,10 @@ EOUMODDIR='MODULES/%sL2/MODULES' % (args.cpu)
 
 os9_format='os9 format -e %s'
 os9_copy='os9 copy %s,%s %s'
+os9_copy_to='os9 copy -r %s %s,%s'
 os9_modbust='os9 modbust %s,OS9Boot'
 os9_gen='os9 gen -b%s -t%s %s'
+os9_gen_frag='os9 gen -e -b=%s -t=%s %s'
 
 kernel_ide='kernel_ide'
 bootfile_ide='OS9Boot'
@@ -154,6 +162,10 @@ def copyFile(fnl, gn, pad=False, mode='wb'):
         f.close()
         dd = '>>'
     g.close()
+
+def copyFileToVhd(sfn, vhd, dfn):
+    cmd = os9_copy_to % (sfn, vhd, dfn)
+    rc, output = runCmd(cmd)
 
 def addPath(path, files):
     return [os.path.join(path, m) for m in files]
@@ -202,7 +214,7 @@ def kwikGen(path, srcVhd, dst, instList):
     copyFile(mods, dst)
     os.chdir(pwd)
 
-def doBuild(buildDir, localMods, copyMods, kernelMods, kwMods):
+def doBuild(buildDir, localMods, copyMods, kernelMods, kwMods, copyFiles):
     print('-' * 50)
     print("0. setup")
     if not os.path.exists(os.path.dirname(buildDir)) or not os.path.exists(buildDir):
@@ -238,15 +250,25 @@ def doBuild(buildDir, localMods, copyMods, kernelMods, kwMods):
     #kwikGen(moduleDir, args.EOUVHD, newBootFile, instns)
     kwikGen(moduleDir, args.EOUVHD, newBootFile, kwMods)
 
-    print('-' * 50)
-    print("5. Make a new boot disk using the new kernel and OS9Boot")
-    cmd = os9_format % (args.IDEDSK)
-    if (os.path.exists(args.IDEDSK)):
-        print('rm %s' % args.IDEDSK)
-        os.unlink(args.IDEDSK)
-    runCmd(cmd)
-    cmd = os9_gen % (bootfile_ide, kernel_ide, args.IDEDSK)
-    runCmd(cmd)
+    if args.emulator == 'coco3fpga':
+        print('-' * 50)
+        print("5. Write new kernel and OS9Boot to VHD")
+        copyFile([args.EOUVHD], args.CC3FPGAVHD)
+        runCmd('os9 copy %s,LIB/sys.l sys.l' % args.CC3FPGAVHD)
+        runCmd('os9 del %s,LIB/sys.l' % args.CC3FPGAVHD)
+        cmd = os9_gen % (bootfile_ide, kernel_ide, args.CC3FPGAVHD)
+        runCmd(cmd)
+        runCmd('os9 copy sys.l %s,LIB/sys.l' % args.CC3FPGAVHD)
+    else:
+        print('-' * 50)
+        print("5. Make a new boot disk using the new kernel and OS9Boot")
+        cmd = os9_format % (args.IDEDSK)
+        if (os.path.exists(args.IDEDSK)):
+            print('rm %s' % args.IDEDSK)
+            os.unlink(args.IDEDSK)
+        runCmd(cmd)
+        cmd = os9_gen % (bootfile_ide, kernel_ide, args.IDEDSK)
+        runCmd(cmd)
 
     if args.emulator == 'xroar':
         print('-' * 50)
@@ -268,6 +290,18 @@ def doBuild(buildDir, localMods, copyMods, kernelMods, kwMods):
         print('-' * 50)
         print("6. Use the Original VHD File in your emulator:")
         print("   %s" % (args.EOUVHD))
+    elif args.emulator == 'coco3fpga':
+        print('-' * 50)
+        print("6. Copy files to image")
+        os.chdir(args.localModuleDir)
+        for sfn, dfn in copyFiles:
+            copyFileToVhd(sfn, args.CC3FPGAVHD, dfn)
+        runCmd('os9 attr %s,sysgo -e -pe' % args.CC3FPGAVHD)
+        print('-' * 50)
+        print("7. Use the coco3fpga VHD File in your coco3fpga:")
+        print("   %s" % (args.CC3FPGAVHD))
+        os.chdir(args.buildDir)
+
 
     print('-' * 50)
     print("9. Copy Misc files to build dir")
@@ -277,7 +311,10 @@ def doBuild(buildDir, localMods, copyMods, kernelMods, kwMods):
 
 ## main
 
-kwikGenList = [['ide_%s' % args.emulator]]
+if args.kwikgen is not None:
+    kwikGenList = [[args.kwikgen]]
+else:
+    kwikGenList = [['ide_%s' % args.emulator]]
 if args.dw:
     kwikGenList += [['ide_%s' % args.emulator, 'dw_%s' % (args.dw)]]
 
@@ -287,6 +324,7 @@ for kwikGens in kwikGenList:
     copyMods = []
     kernelMods = []
     instns = []
+    copyFiles = []
     subDir = '_'.join(kwikGens)
     args = pathSetup(args, subDir=subDir)
     for kw in kwikGens:
@@ -296,6 +334,7 @@ for kwikGens in kwikGenList:
                 copyMods += t.get('copyMods', [])
                 kernelMods += t.get('kernelMods', [])
                 instns += t.get('instructions', [])
+                copyFiles += t.get('copyFiles', [])
     msg = []
     print('')
     msg.append('='*50)
@@ -304,7 +343,7 @@ for kwikGens in kwikGenList:
     msg.append('='*50)
     print('\n'.join(msg))
     msgs += msg
-    doBuild(args.buildDir, localMods, copyMods, kernelMods, instns)
+    doBuild(args.buildDir, localMods, copyMods, kernelMods, instns, copyFiles)
 
 
 print('')

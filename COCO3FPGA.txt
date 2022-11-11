@@ -1,0 +1,70 @@
++==============================+
+| EOU for CoCo3FPGA            |
+|                              |
+| Michael Furman (MikeyN6IL)   |
+| 10 Nov 2022                  |
++==============================+
+
+This is a DIY Pack for setting up EOU to work on a CoCo3FPGA board.
+
+There are two versions:
+
+	coco3fpga_dw_becker - This build is designed to work with a
+		CoCo3FPGA DriveWire Setup.  The image for this build is in
+		the build/6809_coco3fpga_dw_becker directory.  Use the
+		68COCO3FPGA.VHD disk image and attach it to DriveWire drive
+		0.  Type DOS to boot over DriveWire.
+
+	 coco3fpga_sdboot_dw_becker - This build works with a CoCo3FPGA
+		with the SDBoot ROM and SD Card. The image for this build is
+		in the build/build/6809_coco3fpga_sdboot_dw_becker
+		directory.  Write the 68COCO3FPGA.VHD file in this
+		directory to a SD Card and insert it in your coco3fpga.
+		Make sure that SW6 is in the UP position.  Switch the MPI
+		to the slot containing your SDBoot Rom (Normally slot 2)
+		and power on the CoCo3FPGA.
+
+====
+
+Building All the Xroar, Mame, and CoCo3FPGA Builds.
+
+1. Edit make.sh to set the srcvhd location
+2. Run make.sh
+
+====
+
+Building the coco3fpga_dw_becker build:
+
+    srcvhd="/media/share1/EMU/EOU/68SDC.VHD"
+    python3 ./makebootfileide.py -c "6809" -i "${srcvhd}" -e "coco3fpga" -k "coco3fpga_dw_becker"
+	
+Result:
+
+		build/6809_coco3fpga_dw_becker/68COCO3FPGA.VHD
+
+Usage:
+
+1. Attach build/6809_coco3fpga_dw_becker/68COCO3FPGA.VHD to DriveWire Drive 0
+2. Power up CoCo3FPGA
+3. Type DOS
+
+====
+
+Building the coco3fpga_sdboot_dw_becker build:
+
+	cpu="6809"
+	srcvhd="/media/share1/EMU/EOU/68SDC.VHD"
+	python3 ./makebootfileide.py -c "6809" -i "${srcvhd}" -e "coco3fpga" -k "coco3fpga_sdboot_dw_becker"
+	
+Result:
+
+		build/6809_coco3fpga_sdboot_dw_becker/68COCO3FPGA.VHD
+
+Usage:
+
+1. Write build/6809_coco3fpga_sdboot_dw_becker/68COCO3FPGA.VHD to a SD Card
+2. Insert card in CoCo3FPGA
+3. Ensure SW6 is in the UP position
+4. Set MPI Slot to SDBoot (Normally Slot 2)
+5. Power on the CoCo3FPGA 
+	
